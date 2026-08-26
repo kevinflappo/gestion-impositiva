@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Vencimientos Impositivos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Estilos del selector personalizado -->
+    <link rel="stylesheet" href="./custom-select.css">
+    <!-- Lógica del selector personalizado (debe ir ANTES de tu script principal) -->
+    <script src="./custom-select.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: #f1f5f9; padding: 25px; color: #1e293b; }
+        .layout { display: grid; grid-template-columns: 320px 1fr; gap: 25px; max-width: 1400px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        h2 { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 18px; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 6px; }
+        input, select { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.88rem; outline: none; background-color: #f8fafc; }
+        input:focus, select:focus { border-color: #2563eb; background-color: #fff; }
+        .btn-blue { width: 100%; background-color: #2563eb; color: white; border: none; padding: 11px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
+        .btn-blue:hover { background-color: #1d4ed8; }
+        .btn-dark { width: 100%; background-color: #334155; color: white; border: none; padding: 11px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+        .btn-red { width: 100%; background-color: #ef4444; color: white; border: none; padding: 11px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
+        .btn-red:hover { background-color: #dc2626; }
+        .btn-pay { background-color: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+        .btn-revert { background-color: #cbd5e1; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .table-actions { display: flex; align-items: center; gap: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        th { text-align: left; padding: 12px 14px; background-color: #f8fafc; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 14px; border-bottom: 1px solid #f1f5f9; }
+        .badge-manana { background-color: #fef2f2; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; border: 1px solid #fca5a5; }
+        .badge-pagado { background-color: #f0fdf4; color: #16a34a; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; border: 1px solid #86efac; }
+        .empty-row { text-align: center; color: #94a3b8; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<!-- CONTENEDOR DE SECCIONES DESPLEGABLES -->
+<div class="paneles-desplegables" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;">
+
+    <!-- 1. CREAR CLIENTE -->
+    <details class="card-desplegable">
+        <summary class="titulo-desplegable">➕ Crear Nuevo Cliente</summary>
+        <form id="form-cliente" onsubmit="guardarCliente(event)" style="margin-top: 15px;">
+            <div class="form-group">
+                <label>Razón Social / Nombre</label>
+                <input type="text" id="razon_social" placeholder="Razón Social / Nombre" required>
+            </div>
+            <div class="form-group">
+                <label>CUIT</label>
+                <input type="text" id="cuit" placeholder="CUIT" required>
+            </div>
+            <div class="form-group">
+                <label>Clave Fiscal</label>
+                <input type="password" id="clave" placeholder="**********">
+            </div>
+            <div class="form-group">
+                <label>Teléfono WhatsApp</label>
+                <input type="text" id="telefono" placeholder="Ej: 5493496507941">
+            </div>
+            <div class="form-group">
+                <label>Email Notificaciones</label>
+                <input type="email" id="email" placeholder="cliente@email.com">
+            </div>
+            <button type="submit" class="btn-primary">Guardar Cliente</button>
+        </form>
+    </details>
+
+    <!-- 2. EDITAR CLIENTE (Solo Datos) -->
+    <details class="card-desplegable">
+        <summary class="titulo-desplegable">✏️ Editar Datos de Cliente</summary>
+        <form id="form-editar" onsubmit="guardarEdicionClienteSoloDatos(event)" style="margin-top: 15px;">
+            <div class="form-group">
+                <label>Seleccionar Cliente</label>
+                <div id="select-cliente-editar"></div>
+            </div>
+            <div class="form-group">
+                <label>Nueva Clave Fiscal</label>
+                <input type="password" id="edit-clave" placeholder="Dejar en blanco para no cambiar">
+            </div>
+            <div class="form-group">
+                <label>Teléfono WhatsApp</label>
+                <input type="text" id="edit-telefono" placeholder="Ej: 5491112345678">
+            </div>
+            <div class="form-group">
+                <label>Email Notificaciones</label>
+                <input type="email" id="edit-email" placeholder="nuevo@email.com">
+            </div>
+            <button type="submit" class="btn-dark">Guardar Cambios de Datos</button>
+        </form>
+    </details>
+
+    <!-- 3. GESTIONAR Y ASIGNAR IMPUESTOS -->
+<details class="card-desplegable">
+    <summary class="titulo-desplegable">📌 Asignar / Gestionar Impuestos</summary>
+    <form id="form-impuestos-cliente" onsubmit="guardarAsignacionImpuestos(event)" style="margin-top: 15px;">
+        
+        <div class="form-group">
+            <label><b>Seleccionar Cliente:</b></label>
+            <div id="select-cliente-impuestos"></div>
+        </div>
+
+        <!-- Badges con impuestos actuales -->
+        <div class="form-group">
+            <label><b>Impuestos Actualmente Asignados:</b></label>
+            <div id="impuestos-actuales-cliente" style="margin-top: 5px; min-height: 25px; display: flex; flex-wrap: wrap; gap: 6px;">
+                <span style="color: #888; font-size: 0.85em;">Seleccione un cliente para ver sus impuestos...</span>
+            </div>
+        </div>
+
+        <!-- Lista de Impuestos con Categoría Dinámica -->
+        <div class="form-group">
+            <label><b>Marcar Impuestos a Asignar:</b></label>
+            <div id="contenedor-checkboxes-impuestos" style="max-height: 250px; overflow-y: auto; border: 1px solid #ccc; padding: 12px; border-radius: 6px; background-color: #fff; display: flex; flex-direction: column; gap: 10px;">
+                <!-- Se llena dinámicamente con JS -->
+            </div>
+        </div>
+
+        <button type="submit" class="btn-primary" style="margin-top: 10px;">Guardar Impuestos Asignados</button>
+    </form>
+</details>
+
+    <!-- 3b. VENCIMIENTOS MANUALES (impuestos sin agenda automática, ej: Honorarios) -->
+    <details class="card-desplegable">
+        <summary class="titulo-desplegable">🗓️ Cargar Vencimiento Manual</summary>
+        <div style="margin-top: 10px; font-size: 0.8rem; color: #64748b;">
+            Para impuestos sin agenda automática de ARCA (ej: Honorarios del Contador, Casas Particulares hasta que se cargue su regla oficial).
+        </div>
+        <form id="form-vencimiento-manual" onsubmit="guardarVencimientoManual(event)" style="margin-top: 15px;">
+            <div class="form-group">
+                <label>Cliente</label>
+                <div id="manual-cliente"></div>
+            </div>
+            <div class="form-group">
+                <label>Impuesto (solo de carga manual)</label>
+                <div id="manual-impuesto"></div>
+            </div>
+            <div class="form-group">
+                <label>Fecha de Vencimiento</label>
+                <input type="date" id="manual-fecha" required>
+            </div>
+            <div class="form-group">
+                <label>Monto</label>
+                <input type="number" id="manual-monto" min="0" step="0.01" placeholder="0">
+            </div>
+            <button type="submit" class="btn-blue">Cargar Vencimiento</button>
+        </form>
+
+        <hr style="margin: 18px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+        <div style="font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 8px;">¿No está el impuesto que buscás?</div>
+        <div class="form-group" style="display: flex; gap: 8px; align-items: flex-end; margin-bottom: 0;">
+            <div style="flex: 1;">
+                <label>Nombre del impuesto nuevo</label>
+                <input type="text" id="nuevo-impuesto-manual-nombre" placeholder="Ej: Tasa Municipal">
+            </div>
+            <button type="button" class="btn-dark" style="width: auto; padding: 10px 14px;" onclick="crearImpuestoManual()">+ Crear</button>
+        </div>
+    </details>
+
+    <!-- 3c. IMPORTAR CALENDARIOS POR PDF (feriados + agenda Errepar) -->
+    <details class="card-desplegable">
+        <summary class="titulo-desplegable">📅 Importar Feriados / Agenda Anual (PDF)</summary>
+
+        <!-- Sub-sección: Feriados -->
+        <div style="margin-top: 15px; padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 600; margin-bottom: 8px;">Feriados (feriadosargentina.com.ar)</div>
+            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">
+                El PDF debe ser el calendario descargado de feriadosargentina.com.ar (con la lista de feriados al final).
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <input type="file" id="input-pdf-feriados" accept="application/pdf" style="flex: 1; min-width: 200px;">
+                <button type="button" class="btn-blue" style="width: auto; padding: 8px 16px;" onclick="subirFeriadosPDF()">Analizar PDF</button>
+            </div>
+            <div id="feriados-preview-container" style="margin-top: 12px;"></div>
+        </div>
+
+        <!-- Sub-sección: Errepar -->
+        <div style="margin-top: 14px; padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="font-weight: 600; margin-bottom: 8px;">Calendario de Vencimientos (Errepar)</div>
+            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 10px;">
+                Reconoce automáticamente: Autónomos, Monotributo, IVA, SICOSS, Convenio Multilateral, Retenciones (2ª quincena), Casas Particulares, y los eventos anuales de junio/julio. El año no se detecta solo del PDF — indicalo a mano.
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <input type="file" id="input-pdf-errepar" accept="application/pdf" style="flex: 1; min-width: 200px;">
+                <input type="number" id="input-anio-errepar" placeholder="Año (ej: 2026)" style="width: 130px;" min="2020" max="2100">
+                <button type="button" class="btn-blue" style="width: auto; padding: 8px 16px;" onclick="subirErreparPDF()">Analizar PDF</button>
+            </div>
+            <div id="errepar-preview-container" style="margin-top: 12px;"></div>
+        </div>
+    </details>
+
+    <!-- 4. ELIMINAR CLIENTE -->
+    <details class="card-desplegable">
+        <summary class="titulo-desplegable">🗑️ Eliminar Cliente</summary>
+        <div style="margin-top: 15px;">
+            <div class="form-group">
+                <label>Seleccionar Cliente a Eliminar</label>
+                <div id="select-cliente-eliminar"></div>
+            </div>
+            <button type="button" class="btn-danger" onclick="eliminarClienteSeleccionado()">Eliminar Cliente</button>
+        </div>
+    </details>
+    <!-- CALENDARIO -->
+    <!-- CALENDARIO -->
+    <div class="main-content">
+        <div class="card">
+            <div class="table-header">
+                <h2>Calendario Unificado</h2>
+                <div class="table-actions">
+                    <label style="margin: 0;">Buscar Cliente:</label>
+                    <input type="text" id="filtro-nombre" oninput="aplicarFiltrosCalendario()" placeholder="Nombre del cliente..." style="width: 180px;">
+                    <label style="margin: 0;">Filtrar Fecha:</label>
+                    <input type="date" id="filtro-fecha" onchange="aplicarFiltrosCalendario()">
+                    <label style="margin: 0; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                        <input type="checkbox" id="ocultar-pagados" checked onchange="aplicarFiltrosCalendario()">
+                        Ocultar pagados
+                    </label>
+                    <button class="btn-blue" style="width: auto; padding: 8px 16px;" onclick="cargarTodo()">🔄 Actualizar</button>
+                </div>
+            </div>
+
+            <!-- Contenedor con scroll -->
+            <div style="max-height: 450px; overflow-y: auto; overflow-x: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <table id="tabla-calendario" style="width: 100%; border-collapse: collapse;">
+                    <thead style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 1;">
+                        <tr>
+                            <th>Estado</th>
+                            <th>Cliente</th>
+                            <th>CUIT</th>
+                            <th>Impuesto</th>
+                            <th>Org.</th>
+                            <th>Vencimiento</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="calendario-body">
+                    <!-- Las filas se inyectan dinámicamente acá -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Avisar vencimiento por WhatsApp/Email -->
+<div id="modal-avisar" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 50; align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 12px; padding: 24px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <h2 style="margin-bottom: 6px;">📨 Avisar Vencimiento</h2>
+        <p id="modal-avisar-detalle" style="font-size: 0.8rem; color: #64748b; margin-bottom: 16px;"></p>
+
+        <div class="form-group">
+            <label>Canal</label>
+            <select id="modal-avisar-canal">
+                <option value="auto">Automático (WhatsApp si tiene, si no Email)</option>
+                <option value="whatsapp">Forzar WhatsApp</option>
+                <option value="email">Forzar Email</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Monto (opcional — actualiza el vencimiento antes de avisar)</label>
+            <input type="number" id="modal-avisar-monto" min="0" step="0.01" placeholder="Dejar vacío para no modificar">
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+            <button type="button" class="btn-blue" onclick="confirmarAviso()">Enviar Aviso</button>
+            <button type="button" class="btn-dark" style="background: #94a3b8;" onclick="cerrarModalAvisar()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let cacheCalendario = [];
+    let listaClientes = [];
+    let listaImpuestos = []; // cache global: incluye tipo_agenda ('automatica' | 'manual')
+    let vencimientoIdParaAvisar = null;
+
+    // 🔧 Fix del bug de foco de Electron/Windows: tras ciertos cambios de DOM
+    // (abrir un acordeón, recargar datos, guardar algo), los <select>/<input>
+    // nativos dejan de responder al primer click/tecla. Esto le pide al
+    // proceso principal que haga un ciclo enable/disable + focus() sobre la
+    // ventana, lo cual resetea el message pump de Win32 y arregla el bug.
+    function refrescarFocoElectron() {
+        console.log('[refrescarFocoElectron] disparado'); // 🔍 log temporal de diagnóstico
+        if (!window.electronAPI || typeof window.electronAPI.refrescarFoco !== 'function') {
+            console.warn('[refrescarFocoElectron] window.electronAPI no está disponible');
+            return;
+        }
+        // Antes esperábamos 250ms, pero no le daba tiempo al navegador a terminar
+        // de repintar tablas grandes (ej: el calendario) antes de resincronizar el
+        // foco. Ahora esperamos más, Y repetimos una segunda vez como red de
+        // seguridad por si el primer intento todavía llega "temprano".
+        setTimeout(() => window.electronAPI.refrescarFoco(), 500);
+        setTimeout(() => window.electronAPI.refrescarFoco(), 1200);
+    }
+
+    // alert()/confirm() son diálogos NATIVOS de Windows: al cerrarlos, Electron
+    // pierde la misma sincronía de foco que veníamos arreglando. En vez de
+    // parchear los 40 alert() sueltos que hay en el archivo, pisamos las
+    // funciones globales una sola vez acá.
+    const _alertOriginal = window.alert;
+    window.alert = function (msg) {
+        _alertOriginal(msg);
+        refrescarFocoElectron();
+    };
+    const _confirmOriginal = window.confirm;
+    window.confirm = function (msg) {
+        const resultado = _confirmOriginal(msg);
+        refrescarFocoElectron();
+        return resultado;
+    };
+
+document.addEventListener('DOMContentLoaded', () => { 
+    // Los CustomSelect ya se instancian más abajo (selectEditar, selectImpuestos,
+    // selectEliminar, selectManual, selectImpuesto) apenas se parsea el script,
+    // así que acá solo disparamos la carga de datos.
+    cargarTodo(); 
+    setTimeout(cargarClientesEnSelects, 200);
+
+    // Cada vez que se abre/cierra un acordeón (<details>), el layout cambia
+    // de golpe y ahí es cuando Electron pierde la sincronía de foco — por
+    // eso Fecha/Monto en "Cargar Vencimiento Manual" dejaban de responder.
+    document.querySelectorAll('details.card-desplegable').forEach((det) => {
+        det.addEventListener('toggle', () => {
+            if (det.open) refrescarFocoElectron();
+        });
+    });
+});
+    //cuando hace click funciona(se supone)
+    document.addEventListener('click', (e) => {
+    if (e.target && e.target.matches('#btn-abrir-seccion, .tab-vencimientos, .nav-impuestos')) {
+        cargarClientesEnSelects();
+    }
+    });
+    // 📌 Carga inicial unificada de todos los datos
+    async function cargarTodo() {
+        await cargarImpuestosGlobal(); // primero, porque los selects de impuestos dependen de esto
+        await Promise.all([
+            cargarClientesEnSelects(), 
+            cargarCalendario()
+        ]);
+        cargarImpuestosEnCheckboxes();
+        poblarSelectImpuestosManuales();
+    }
+
+    // 📌 Trae TODOS los impuestos (con tipo_agenda) una sola vez y los cachea
+    async function cargarImpuestosGlobal() {
+    try {
+        const res = await fetch('/api/impuestos'); // O la ruta que uses para tus impuestos
+        const impuestos = await res.json();
+        listaImpuestos = impuestos; // 🔧 FIX: faltaba cachear esto en la variable global;
+                                     // por eso los checkboxes y el select de "Impuesto manual"
+                                     // quedaban siempre vacíos.
+
+        // Transformamos los datos al formato que exige el CustomSelect
+        const opcionesImpuestos = impuestos.map(imp => ({
+            value: imp.id,
+            text: imp.nombre // Cambia 'nombre' por la propiedad real que tenga tu impuesto (ej: imp.descripcion, etc.)
+        }));
+
+        // ¡Aquí aplicamos el componente que creamos!
+        selectImpuesto.setOptions(opcionesImpuestos);
+
+    } catch (e) {
+        console.error('Error cargando impuestos:', e);
+    }
+}
+
+
+// 1. Instanciamos los CustomSelect para cada contenedor que tengas en la app
+const selectEditar = new CustomSelect('#select-cliente-editar', {
+  placeholder: '-- Seleccione Cliente --',
+  buscador: true // Agrega buscador automático si lo deseas
+});
+
+const selectImpuestos = new CustomSelect('#select-cliente-impuestos', {
+  placeholder: '-- Seleccione Cliente --',
+  buscador: true
+});
+
+const selectEliminar = new CustomSelect('#select-cliente-eliminar', {
+  placeholder: '-- Seleccione Cliente --',
+  buscador: true
+});
+
+const selectManual = new CustomSelect('#manual-cliente', {
+  placeholder: '-- Seleccione Cliente --',
+  buscador: true
+});
+
+const selectImpuesto = new CustomSelect('#manual-impuesto', {
+  placeholder: '-- Seleccione Impuesto --',
+  buscador: false // Ponlo en true si tienes muchos impuestos y quieres barra de búsqueda
+});
+
+// Reconectamos los "onchange" que se perdieron al pasar de <select> nativo a <div>.
+// Con CustomSelect, el evento 'change' se suscribe así (no vía atributo HTML onchange):
+selectEditar.addEventListener('change', cargarDatosClienteParaEditar);
+selectImpuestos.addEventListener('change', cargarImpuestosDelCliente);
+
+// 2. Tu nueva función de carga adaptada que actualiza los 4 selects de golpe
+async function cargarClientesEnSelects() {
+    try {
+        const res = await fetch('/api/clientes');
+        if (!res.ok) return;
+        listaClientes = await res.json();
+
+        // Mapeamos los datos al formato que espera el componente ({ value, text })
+        const opcionesFormateadas = listaClientes.map(c => ({
+            value: c.id,
+            text: `${c.razon_social} (CUIT: ${c.cuit})`
+        }));
+
+        // Actualizamos cada componente usando el método setOptions nativo del componente
+        selectEditar.setOptions(opcionesFormateadas);
+        selectImpuestos.setOptions(opcionesFormateadas);
+        selectEliminar.setOptions(opcionesFormateadas);
+        selectManual.setOptions(opcionesFormateadas);
+
+    } catch (e) {
+        console.error('Error cargando clientes:', e);
+    }
+}
+    // 📌 Cargar lista de checkboxes con los impuestos AUTOMÁTICOS disponibles
+// (los manuales, como Honorarios, se cargan desde el panel "Cargar Vencimiento Manual")
+function cargarImpuestosEnCheckboxes() {
+    const contenedor = document.getElementById('contenedor-checkboxes-impuestos');
+    if (!contenedor) return;
+
+    // Resetear estilos del contenedor para asegurar alineación a la izquierda
+    contenedor.style.display = 'flex';
+    contenedor.style.flexDirection = 'column';
+    contenedor.style.gap = '8px';
+    contenedor.style.padding = '8px';
+    contenedor.style.textAlign = 'left';
+
+    const impuestosAutomaticos = listaImpuestos.filter(i => i.tipo_agenda !== 'manual');
+
+    if (impuestosAutomaticos.length > 0) {
+        contenedor.innerHTML = '';
+        impuestosAutomaticos.forEach(i => {
+            contenedor.innerHTML += `
+                <label for="check_imp_${i.id}" style="
+                    display: flex; 
+                    align-items: center; 
+                    gap: 10px; 
+                    cursor: pointer; 
+                    padding: 8px 12px; 
+                    border-radius: 6px; 
+                    background: #f8f9fa; 
+                    border: 1px solid #e9ecef;
+                    transition: background 0.2s ease;
+                    user-select: none;
+                " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">
+                    <input type="checkbox" name="impuesto_check" value="${i.id}" id="check_imp_${i.id}" style="width: 18px; height: 18px; cursor: pointer; accent-color: #0d6efd;">
+                    <span style="font-size: 0.95em; color: #333;">
+                        <b>${i.nombre}</b> <small style="color: #6c757d;">(ARCA)</small>
+                    </span>
+                </label>
+            `;
+        });
+        return;
+    }
+
+    contenedor.innerHTML = '<span style="color: #888; font-size: 0.85em;">No hay impuestos automáticos cargados.</span>';
+}
+
+// 📌 Llena el select de impuestos MANUALES del panel "Cargar Vencimiento Manual"
+function poblarSelectImpuestosManuales() {
+    const impuestosManuales = listaImpuestos.filter(i => i.tipo_agenda === 'manual');
+    selectImpuesto.setOptions(
+        impuestosManuales.map(i => ({ value: i.id, text: i.nombre }))
+    );
+}
+
+    // 📌 Al seleccionar cliente en "Editar Datos" -> Rellena los campos
+    function cargarDatosClienteParaEditar() {
+    const id = selectEditar.value;
+    const cliente = listaClientes.find(c => c.id == id);
+
+    if (cliente) {
+        document.getElementById('edit-email').value = cliente.email_notificacion || '';
+        document.getElementById('edit-telefono').value = cliente.telefono || '';
+        document.getElementById('edit-clave').value = ''; 
+    } else {
+        document.getElementById('edit-email').value = '';
+        document.getElementById('edit-telefono').value = '';
+        document.getElementById('edit-clave').value = '';
+    }
+}
+async function cargarImpuestosDelCliente() {
+    const cliente_id = selectImpuestos.value;
+    const contenedor = document.getElementById('contenedor-checkboxes-impuestos');
+    const badgeContenedor = document.getElementById('impuestos-actuales-cliente');
+
+    if (!cliente_id) {
+        contenedor.innerHTML = '';
+        badgeContenedor.innerHTML = '<span style="color: #888; font-size: 0.85em;">Seleccione un cliente para ver sus impuestos...</span>';
+        return;
+    }
+
+    try {
+        // El catálogo sale de la caché global (ya filtramos los manuales acá);
+        // solo pedimos fresco lo que el cliente tiene asignado.
+        const resImpuestos = listaImpuestos.filter(i => i.tipo_agenda !== 'manual');
+        const resAsignados = await fetch(`/api/impuestos/cliente/${cliente_id}`).then(r => r.json());
+
+        // 🏷️ Dibujar Badges Superiores
+        if (!resAsignados || resAsignados.length === 0) {
+            badgeContenedor.innerHTML = '<span style="color: #e74c3c; font-size: 0.85em;">Sin impuestos asignados.</span>';
+        } else {
+            badgeContenedor.innerHTML = resAsignados.map(i => 
+                `<span class="badge" style="background:#e1f5fe; color:#0288d1; padding:4px 10px; border-radius:12px; font-size:0.8em; margin-right:5px; font-weight:600;">
+                    ${i.nombre} ${i.categoria ? `(Cat ${i.categoria})` : ''}
+                </span>`
+            ).join('');
+        }
+
+        // Listas oficiales de categorías
+        const catsMono = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
+        const catsAuto = ['I', 'II', 'III', 'IV', 'V'];
+
+        contenedor.innerHTML = '';
+
+        resImpuestos.forEach(imp => {
+            const nombreLower = imp.nombre.toLowerCase();
+            const esMono = nombreLower.includes('monotributo');
+            const esAuto = nombreLower.includes('autónomo') || nombreLower.includes('autonomo');
+
+            // Buscar si este impuesto ya lo tiene el cliente
+            const asignado = (resAsignados || []).find(a => a.impuesto_id === imp.id || a.nombre?.toLowerCase() === imp.nombre.toLowerCase());
+            const estaTildado = !!asignado;
+            const catActual = asignado ? (asignado.categoria || '') : '';
+
+            let htmlSelect = '';
+            if (esMono || esAuto) {
+                const listaCats = esMono ? catsMono : catsAuto;
+                const opciones = listaCats.map(c => `<option value="${c}" ${catActual === c ? 'selected' : ''}>Categoría ${c}</option>`).join('');
+                
+                htmlSelect = `
+                    <select id="cat-input-${imp.id}" style="width: 150px; padding: 4px 8px; font-size: 0.85em; border: 1px solid #cbd5e1; border-radius: 6px; display: ${estaTildado ? 'block' : 'none'}; background-color: #fff;">
+                        <option value="">-- Seleccionar --</option>
+                        ${opciones}
+                    </select>
+                `;
+            }
+
+            const div = document.createElement('div');
+            div.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 8px; margin-bottom: 6px;";
+            div.innerHTML = `
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 0; font-weight: 600; color: #334155; font-size: 0.9rem;">
+                    <input type="checkbox" name="impuesto_check" value="${imp.id}" ${estaTildado ? 'checked' : ''} onchange="toggleCampoCategoria(this, ${esMono || esAuto})" style="width: 18px; height: 18px; cursor: pointer; accent-color: #2563eb;">
+                    ${imp.nombre} <small style="color: #64748b; font-weight: 400;">(${imp.organismo || 'ARCA'})</small>
+                </label>
+                ${htmlSelect}
+            `;
+            contenedor.appendChild(div);
+        });
+
+    } catch (err) {
+        console.error('Error cargando impuestos del cliente:', err);
+    }
+}
+
+// 2. Muestra u oculta el <select> según el checkbox
+function toggleCampoCategoria(chk, tieneCategoria) {
+    if (!tieneCategoria) return;
+    const selectCat = document.getElementById(`cat-input-${chk.value}`);
+    if (selectCat) {
+        selectCat.style.display = chk.checked ? 'block' : 'none';
+        if (!chk.checked) selectCat.value = '';
+    }
+}
+
+// 📌 Guardar un Cliente Nuevo
+async function guardarCliente(e) {
+    if (e) e.preventDefault();
+
+    // 💡 Leemos de forma segura los valores. Si el ID no existe en el HTML, devuelve '' en lugar de dar error.
+    const clienteData = {
+        razon_social: document.getElementById('razon_social')?.value.trim() || '',
+        cuit: document.getElementById('cuit')?.value.trim() || '',
+        clave_fiscal: document.getElementById('clave')?.value.trim() || '',
+        telefono: document.getElementById('telefono')?.value.trim() || '',
+        email_notificacion: document.getElementById('email')?.value.trim() || ''
+    };
+
+    // Validamos en el frontend antes de enviar
+    if (!clienteData.razon_social || !clienteData.cuit) {
+        alert('⚠️ Por favor completá la Razón Social y el CUIT.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/clientes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(clienteData)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert('✅ Cliente guardado con éxito!');
+
+            // 1. Limpias el formulario estándar...
+            const form = document.getElementById('form-cliente') || (e && e.target);
+            if (form && typeof form.reset === 'function') form.reset();
+
+            // 1.1 Si usas el CustomSelect en este formulario, lo reseteas así:
+            if (typeof selectImpuesto !== 'undefined') selectImpuesto.value = '';
+
+            // 2. Actualizas los selects con los nuevos datos...
+            await cargarClientesEnSelects(); 
+
+            // 3. ¡Control IPC por si acaso!
+            try {
+                ipcRenderer.send('cliente-guardado');
+            } catch (err) {
+                console.error("Error al enviar evento IPC:", err);
+            }
+
+        } else {
+            alert(`❌ Error al guardar: ${data.error}`);
+        }
+    } catch (err) {
+        console.error('Error al enviar formulario:', err);
+        alert('❌ Error de conexión al guardar el cliente.');
+    }
+}
+
+    // 📌 Guardar SOLO la edición de datos personales
+    async function guardarEdicionClienteSoloDatos(e) {
+    if (e) e.preventDefault();
+    const cliente_id = selectEditar.value;
+    if (!cliente_id) return alert('Por favor, seleccioná un cliente.');
+
+    const payload = {
+        clave_fiscal: document.getElementById('edit-clave')?.value || '',
+        telefono: document.getElementById('edit-telefono')?.value || '',
+        email_notificacion: document.getElementById('edit-email')?.value || ''
+    };
+
+    try {
+        const res = await fetch(`/api/clientes/${cliente_id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            alert('✅ Datos del cliente actualizados correctamente.');
+            cargarClientesEnSelects();
+        } else {
+            alert('❌ Error al actualizar los datos.');
+        }
+    } catch (err) {
+        console.error('Error al guardar datos del cliente:', err);
+        alert('❌ Error de conexión al guardar.');
+    }
+}
+
+    // 3. Envía los datos con la URL correcta del backend (/api/impuestos/asignar)
+    async function guardarAsignacionImpuestos(e) {
+    if (e) e.preventDefault();
+    
+    const cliente_id = selectImpuestos.value;
+    if (!cliente_id) return alert('Por favor, seleccioná un cliente.');
+
+    const checkboxes = document.querySelectorAll('input[name="impuesto_check"]:checked');
+
+    const impuestosPayload = Array.from(checkboxes).map(cb => {
+        const impId = cb.value;
+        const selectCat = document.getElementById(`cat-input-${impId}`);
+        return {
+            impuesto_id: impId,
+            categoria: selectCat ? selectCat.value : null
+        };
+    });
+
+    try {
+        const res = await fetch('/api/impuestos/asignar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cliente_id, impuestos: impuestosPayload })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert('✅ Impuestos y categorías asignados correctamente.');
+            cargarImpuestosDelCliente();
+            cargarCalendario();
+        } else {
+            alert(`❌ Error al guardar: ${data.error || 'Error desconocido'}`);
+        }
+    } catch (err) {
+        console.error('Error enviando impuestos:', err);
+        alert('❌ Error de conexión al guardar los impuestos.');
+    }
+    }
+
+    // 📌 Eliminar Cliente
+    async function eliminarClienteSeleccionado() {
+        const id = selectEliminar.value;
+        const cliente = listaClientes.find(c => c.id == id);
+        const nombre = cliente ? cliente.razon_social : '';
+
+        if (!id) return alert('Por favor, seleccioná un cliente de la lista.');
+
+        if (confirm(`¿Estás seguro de que querés eliminar a "${nombre}" del sistema?`)) {
+            await fetch(`/api/clientes/${id}`, { method: 'DELETE' });
+            cargarTodo();
+            alert('✅ Cliente eliminado correctamente.');
+        }
+    }
+
+    // 📌 Cargar Calendario (API + Unificación)
+async function cargarCalendario() {
+    const inputPeriodo = document.getElementById('filtro-fecha')?.value || '';
+    const tablaBody = document.getElementById('calendario-body');
+    
+    if (!tablaBody) return;
+
+    let url = '/api/vencimientos';
+    
+    // Si hay un día seleccionado en el input de fecha, filtramos por fecha exacta
+    if (inputPeriodo) {
+        url += `?fecha=${inputPeriodo}`;
+    }
+
+    try {
+        const res = await fetch(url);
+        const vencimientos = await res.json();
+
+        // Guardamos en la memoria caché global
+        cacheCalendario = vencimientos;
+
+        aplicarFiltrosCalendario(); // respeta "Ocultar pagados" también en la carga inicial
+
+    } catch (err) {
+        console.error('❌ Error al cargar el calendario:', err);
+    } finally {
+        // La reconstrucción de la tabla (aplicarFiltrosCalendario -> renderizarFilasCalendario)
+        // es el tipo de cambio de DOM grande que dispara el bug de foco de Electron.
+        // Lo ponemos acá, al final de la función que arma la tabla, en vez de en cada
+        // lugar que la llama (guardarVencimientoManual, cambiarEstado, etc.).
+        refrescarFocoElectron();
+    }
+}
+
+// 📌 Función única para dibujar la tabla en pantalla
+function renderizarFilasCalendario(lista) {
+    const tablaBody = document.getElementById('calendario-body');
+    if (!tablaBody) return;
+
+    tablaBody.innerHTML = '';
+
+    if (!lista || lista.length === 0) {
+        tablaBody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">
+                    No se encontraron vencimientos.
+                </td>
+            </tr>`;
+        return;
+    }
+
+    lista.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        const estado = item.estado || 'PENDIENTE';
+        const esPagado = estado === 'PAGADO';
+        
+        const badgeStyle = esPagado 
+            ? 'background: #dcfce7; color: #166534;' 
+            : 'background: #fef3c7; color: #92400e;';
+
+        const clienteNombre = item.cliente_nombre || item.razon_social || '-';
+        const nombreImpuesto = item.impuesto_nombre || item.impuesto || '-';
+        const categoriaTxt = item.categoria ? ` (Cat ${item.categoria})` : '';
+
+        const nuevoEstado = esPagado ? 'PENDIENTE' : 'PAGADO';
+        const textoBoton = esPagado ? 'Marcar Pendiente' : 'Marcar Pagado';
+
+        tr.innerHTML = `
+            <td><span style="padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 600; ${badgeStyle}">${estado}</span></td>
+            <td><strong>${clienteNombre}</strong></td>
+            <td>${item.cuit || '-'}</td>
+            <td>${nombreImpuesto}${categoriaTxt}</td>
+            <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">${item.organismo || 'ARCA'}</span></td>
+            <td><strong>${item.fecha_vencimiento}</strong></td>
+            <td>
+                <div style="display: flex; gap: 6px;">
+                    <button onclick="cambiarEstado(${item.id}, '${nuevoEstado}')" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; cursor: pointer; font-size: 0.8em; background: #fff;">
+                        ${textoBoton}
+                    </button>
+                    <button onclick="abrirModalAvisar(${item.id}, '${(clienteNombre || '').replace(/'/g, "\\'")}', '${(nombreImpuesto || '').replace(/'/g, "\\'")}', ${item.monto || 0})" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #93c5fd; cursor: pointer; font-size: 0.8em; background: #eff6ff; color: #1d4ed8;">
+                        📨 Avisar
+                    </button>
+                </div>
+            </td>
+        `;
+        tablaBody.appendChild(tr);
+    });
+}
+
+// 📌 Filtro combinado: fecha exacta + nombre de cliente + ocultar pagados (sobre la caché ya cargada)
+function aplicarFiltrosCalendario() {
+    const fechaSeleccionada = document.getElementById('filtro-fecha')?.value;
+    const nombreBuscado = (document.getElementById('filtro-nombre')?.value || '').trim().toLowerCase();
+    const ocultarPagados = document.getElementById('ocultar-pagados')?.checked;
+
+    let resultado = cacheCalendario;
+
+    if (fechaSeleccionada) {
+        resultado = resultado.filter(item => item.fecha_vencimiento === fechaSeleccionada);
+    }
+    if (nombreBuscado) {
+        resultado = resultado.filter(item => (item.cliente_nombre || '').toLowerCase().includes(nombreBuscado));
+    }
+    if (ocultarPagados) {
+        // Solo oculta del período que se está viendo — el mes que viene es OTRA fila
+        // (otro periodo) que sigue PENDIENTE, así que no se ve afectada por esto.
+        resultado = resultado.filter(item => item.estado !== 'PAGADO');
+    }
+
+    renderizarFilasCalendario(resultado);
+}
+
+    // 📌 Cambiar estado (PAGADO / PENDIENTE)
+    async function cambiarEstado(vencimientoId, nuevoEstado) {
+        await fetch(`/api/vencimientos/${vencimientoId}/estado`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: nuevoEstado })
+        });
+        cargarCalendario();
+    }
+
+    // ====================== MODAL DE AVISO MANUAL ======================
+
+    // 📌 Abre el modal para avisar un vencimiento puntual (botón "📨 Avisar" de la tabla)
+    function abrirModalAvisar(vencimientoId, clienteNombre, impuestoNombre, montoActual) {
+        vencimientoIdParaAvisar = vencimientoId;
+        document.getElementById('modal-avisar-detalle').textContent = `${clienteNombre} — ${impuestoNombre}`;
+        document.getElementById('modal-avisar-canal').value = 'auto';
+        document.getElementById('modal-avisar-monto').value = montoActual > 0 ? montoActual : '';
+        document.getElementById('modal-avisar').style.display = 'flex';
+    }
+
+    function cerrarModalAvisar() {
+        document.getElementById('modal-avisar').style.display = 'none';
+        vencimientoIdParaAvisar = null;
+    }
+
+    // 📌 Confirma el envío: llama a POST /api/vencimientos/:id/notificar
+    async function confirmarAviso() {
+        if (!vencimientoIdParaAvisar) return;
+
+        const canal = document.getElementById('modal-avisar-canal').value;
+        const montoInput = document.getElementById('modal-avisar-monto').value;
+
+        const payload = { canal };
+        if (montoInput !== '') payload.monto = montoInput;
+
+        try {
+            const res = await fetch(`/api/vencimientos/${vencimientoIdParaAvisar}/notificar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(`✅ ${data.mensaje}`);
+                cerrarModalAvisar();
+                cargarCalendario();
+            } else {
+                alert(`❌ ${data.error}`);
+            }
+        } catch (err) {
+            console.error('Error enviando aviso:', err);
+            alert('❌ Error de conexión al enviar el aviso.');
+        }
+    }
+
+    // ====================== VENCIMIENTOS MANUALES ======================
+
+    // 📌 Carga fecha + monto para un impuesto de tipo manual (ej: Honorarios)
+    async function guardarVencimientoManual(e) {
+        if (e) e.preventDefault();
+
+        const payload = {
+            cliente_id: selectManual.value,
+            impuesto_id: selectImpuesto.value,
+            fecha_vencimiento: document.getElementById('manual-fecha').value,
+            monto: document.getElementById('manual-monto').value || 0
+        };
+
+        if (!payload.cliente_id || !payload.impuesto_id || !payload.fecha_vencimiento) {
+            alert('⚠️ Completá cliente, impuesto y fecha de vencimiento.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/vencimientos/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert('✅ Vencimiento manual cargado correctamente.');
+                document.getElementById('form-vencimiento-manual').reset();
+                cargarCalendario();
+            } else {
+                alert(`❌ ${data.error}`);
+            }
+        } catch (err) {
+            console.error('Error cargando vencimiento manual:', err);
+            alert('❌ Error de conexión al cargar el vencimiento.');
+        }
+    }
+
+    // 📌 Crea un impuesto nuevo de tipo manual (ej: "Tasa Municipal") desde la interfaz
+    async function crearImpuestoManual() {
+        const input = document.getElementById('nuevo-impuesto-manual-nombre');
+        const nombre = input.value.trim();
+
+        if (!nombre) {
+            alert('⚠️ Ingresá un nombre para el impuesto.');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/impuestos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(`✅ Impuesto "${nombre}" creado correctamente.`);
+                input.value = '';
+                await cargarImpuestosGlobal();
+                poblarSelectImpuestosManuales();
+            } else {
+                alert(`❌ ${data.error}`);
+            }
+        } catch (err) {
+            console.error('Error creando impuesto manual:', err);
+            alert('❌ Error de conexión al crear el impuesto.');
+        }
+    }
+    // ====================== IMPORTACIÓN DE FERIADOS (PDF) ======================
+    let cacheFeriadosPreview = [];
+
+    async function subirFeriadosPDF() {
+        const input = document.getElementById('input-pdf-feriados');
+        if (!input.files[0]) {
+            alert('⚠️ Elegí un archivo PDF primero.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('pdf', input.files[0]);
+
+        const contenedor = document.getElementById('feriados-preview-container');
+        contenedor.innerHTML = '<p style="color:#64748b; font-size:0.85rem;">Analizando PDF...</p>';
+
+        try {
+            const res = await fetch('/api/feriados/importar-pdf', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (!res.ok) {
+                contenedor.innerHTML = '';
+                alert(`❌ ${data.error}`);
+                return;
+            }
+
+            cacheFeriadosPreview = data.feriados;
+            renderPreviewFeriados();
+        } catch (err) {
+            console.error(err);
+            contenedor.innerHTML = '';
+            alert('❌ Error de conexión al subir el PDF.');
+        }
+    }
+
+    function renderPreviewFeriados() {
+        const contenedor = document.getElementById('feriados-preview-container');
+
+        if (cacheFeriadosPreview.length === 0) {
+            contenedor.innerHTML = '<p style="color:#64748b; font-size:0.85rem;">No quedan feriados para cargar.</p>';
+            return;
+        }
+
+        let filas = cacheFeriadosPreview.map((f, i) => `
+            <tr>
+                <td style="padding:4px;"><input type="date" value="${f.fecha}" onchange="cacheFeriadosPreview[${i}].fecha=this.value" style="width:130px;"></td>
+                <td style="padding:4px;"><input type="text" value="${f.motivo}" onchange="cacheFeriadosPreview[${i}].motivo=this.value" style="width:100%;"></td>
+                <td style="padding:4px;"><input type="text" value="${f.tipo}" onchange="cacheFeriadosPreview[${i}].tipo=this.value" style="width:110px;"></td>
+                <td style="padding:4px;"><button type="button" onclick="eliminarFilaFeriado(${i})" style="border:none; background:none; color:#dc2626; cursor:pointer;">✕</button></td>
+            </tr>
+        `).join('');
+
+        contenedor.innerHTML = `
+            <p style="font-size:0.85rem; color:#334155; margin-bottom:8px;">
+                Se encontraron <b>${cacheFeriadosPreview.length}</b> feriados. Revisá y corregí lo que haga falta antes de confirmar.
+            </p>
+            <div style="max-height: 260px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+                <table style="width:100%; font-size:0.8rem; border-collapse: collapse;">
+                    <thead style="position: sticky; top: 0; background: #f1f5f9;">
+                        <tr><th style="padding:4px; text-align:left;">Fecha</th><th style="padding:4px; text-align:left;">Motivo</th><th style="padding:4px; text-align:left;">Tipo</th><th></th></tr>
+                    </thead>
+                    <tbody>${filas}</tbody>
+                </table>
+            </div>
+            <button type="button" class="btn-blue" style="margin-top:10px; width:auto; padding:8px 16px;" onclick="confirmarFeriados()">✅ Confirmar Carga (${cacheFeriadosPreview.length})</button>
+        `;
+    }
+
+    function eliminarFilaFeriado(i) {
+        cacheFeriadosPreview.splice(i, 1);
+        renderPreviewFeriados();
+    }
+
+    async function confirmarFeriados() {
+        try {
+            const res = await fetch('/api/feriados/confirmar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feriados: cacheFeriadosPreview })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert(`✅ ${data.mensaje}`);
+                cacheFeriadosPreview = [];
+                document.getElementById('feriados-preview-container').innerHTML = '';
+                document.getElementById('input-pdf-feriados').value = '';
+            } else {
+                alert(`❌ ${data.error}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('❌ Error de conexión al confirmar los feriados.');
+        }
+    }
+
+    // ====================== IMPORTACIÓN DE AGENDA ERREPAR (PDF) ======================
+    let cacheAgendaPreview = [];
+
+    async function subirErreparPDF() {
+        const input = document.getElementById('input-pdf-errepar');
+        const anio = document.getElementById('input-anio-errepar').value;
+
+        if (!input.files[0]) {
+            alert('⚠️ Elegí un archivo PDF primero.');
+            return;
+        }
+        if (!anio) {
+            alert('⚠️ Indicá el año del calendario (ej: 2026).');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('pdf', input.files[0]);
+        formData.append('anio', anio);
+
+        const contenedor = document.getElementById('errepar-preview-container');
+        contenedor.innerHTML = '<p style="color:#64748b; font-size:0.85rem;">Analizando PDF (puede tardar unos segundos)...</p>';
+
+        try {
+            const res = await fetch('/api/agenda/importar-pdf', { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (!res.ok) {
+                contenedor.innerHTML = '';
+                alert(`❌ ${data.error}`);
+                return;
+            }
+
+            cacheAgendaPreview = data.filas;
+            renderPreviewAgenda();
+        } catch (err) {
+            console.error(err);
+            contenedor.innerHTML = '';
+            alert('❌ Error de conexión al subir el PDF.');
+        }
+    }
+
+    function renderPreviewAgenda() {
+        const contenedor = document.getElementById('errepar-preview-container');
+
+        if (cacheAgendaPreview.length === 0) {
+            contenedor.innerHTML = '<p style="color:#64748b; font-size:0.85rem;">No quedan filas para cargar.</p>';
+            return;
+        }
+
+        // Agrupamos por impuesto para no mostrar 1000 filas sueltas de una
+        const grupos = {};
+        cacheAgendaPreview.forEach((f, i) => {
+            if (!grupos[f.impuesto]) grupos[f.impuesto] = [];
+            grupos[f.impuesto].push(i); // guardamos el índice original, no una copia
+        });
+
+        let html = `<p style="font-size:0.85rem; color:#334155; margin-bottom:8px;">
+            Se encontraron <b>${cacheAgendaPreview.length}</b> fechas en <b>${Object.keys(grupos).length}</b> impuestos. Desplegá cada uno para revisar o corregir antes de confirmar.
+        </p>`;
+
+        Object.keys(grupos).sort().forEach(impuesto => {
+            const indices = grupos[impuesto];
+            const filas = indices.map(i => {
+                const f = cacheAgendaPreview[i];
+                return `
+                    <tr>
+                        <td style="padding:3px;">${f.periodo}</td>
+                        <td style="padding:3px; text-align:center;">${f.terminacion_cuit}</td>
+                        <td style="padding:3px;"><input type="date" value="${f.fecha_vencimiento}" onchange="cacheAgendaPreview[${i}].fecha_vencimiento=this.value" style="width:130px;"></td>
+                        <td style="padding:3px;"><button type="button" onclick="eliminarFilaAgenda(${i})" style="border:none; background:none; color:#dc2626; cursor:pointer;">✕</button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            html += `
+                <details style="margin-bottom:6px; border:1px solid #e2e8f0; border-radius:6px; padding:6px 10px;">
+                    <summary style="cursor:pointer; font-size:0.85rem; font-weight:600;">${impuesto} <span style="color:#64748b; font-weight:400;">(${indices.length} fechas)</span></summary>
+                    <div style="max-height:220px; overflow-y:auto; margin-top:8px;">
+                        <table style="width:100%; font-size:0.78rem; border-collapse:collapse;">
+                            <thead style="position:sticky; top:0; background:#f1f5f9;">
+                                <tr><th style="padding:3px; text-align:left;">Período</th><th style="padding:3px;">CUIT term.</th><th style="padding:3px; text-align:left;">Fecha</th><th></th></tr>
+                            </thead>
+                            <tbody>${filas}</tbody>
+                        </table>
+                    </div>
+                </details>
+            `;
+        });
+
+        html += `<button type="button" class="btn-blue" style="margin-top:10px; width:auto; padding:8px 16px;" onclick="confirmarAgenda()">✅ Confirmar Carga (${cacheAgendaPreview.length})</button>`;
+        contenedor.innerHTML = html;
+    }
+
+    function eliminarFilaAgenda(i) {
+        cacheAgendaPreview.splice(i, 1);
+        renderPreviewAgenda();
+    }
+
+    async function confirmarAgenda() {
+        try {
+            const res = await fetch('/api/agenda/confirmar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filas: cacheAgendaPreview })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                let mensaje = `✅ ${data.mensaje}`;
+                if (data.omitidas && data.omitidas.length > 0) {
+                    mensaje += `\n\n⏭️ Impuestos omitidos:\n` + data.omitidas.map(o => `- ${o.impuesto}: ${o.motivo}`).join('\n');
+                }
+                alert(mensaje);
+                cacheAgendaPreview = [];
+                document.getElementById('errepar-preview-container').innerHTML = '';
+                document.getElementById('input-pdf-errepar').value = '';
+                document.getElementById('input-anio-errepar').value = '';
+                cargarCalendario(); // por si algún vencimiento visible cambió de fecha
+            } else {
+                alert(`❌ ${data.error}`);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('❌ Error de conexión al confirmar la agenda.');
+        }
+    }
+</script>
+</body>
+</html>

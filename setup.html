@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Configuración inicial</title>
+<style>
+    body { font-family: Arial, sans-serif; padding: 24px; background: #f8fafc; margin: 0; }
+    h2 { margin-top: 0; color: #1e293b; }
+    p.intro { font-size: 0.85rem; color: #64748b; margin-bottom: 18px; }
+    label.opcion {
+        display: flex; align-items: flex-start; gap: 10px; padding: 12px;
+        border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px;
+        cursor: pointer; background: #fff;
+    }
+    label.opcion:hover { background: #eff6ff; border-color: #93c5fd; }
+    label.opcion input { margin-top: 3px; }
+    label.opcion b { color: #1e293b; }
+    label.opcion small { color: #64748b; }
+    #campo-ip { display: none; margin-top: 12px; }
+    #campo-ip label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.85rem; }
+    input[type="text"] {
+        width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px;
+        box-sizing: border-box; font-size: 0.9rem;
+    }
+    #ips-info {
+        font-size: 0.8rem; color: #1d4ed8; margin-top: 12px; padding: 10px;
+        background: #eff6ff; border-radius: 6px; line-height: 1.5;
+    }
+    button {
+        margin-top: 20px; width: 100%; padding: 11px; background: #0d6efd;
+        color: white; border: none; border-radius: 6px; font-weight: 600;
+        font-size: 0.95rem; cursor: pointer;
+    }
+    button:hover { background: #0b5ed7; }
+</style>
+</head>
+<body>
+    <h2>⚙️ Configuración inicial</h2>
+    <p class="intro">Esta pantalla solo aparece una vez. Elegí cómo funciona esta PC dentro de la red del estudio.</p>
+
+    <label class="opcion">
+        <input type="radio" name="modo" value="servidor" checked>
+        <div><b>Esta es la PC Servidor</b><br><small>Acá vive la base de datos real (clientes, vencimientos, todo). Elegí esta opción en UNA sola PC.</small></div>
+    </label>
+    <label class="opcion">
+        <input type="radio" name="modo" value="cliente">
+        <div><b>Esta PC se conecta a otra</b><br><small>Usa la base de datos de la PC Servidor a través de la red local. Elegí esta opción en las otras PCs.</small></div>
+    </label>
+
+    <div id="campo-ip">
+        <label>IP de la PC Servidor</label>
+        <input type="text" id="input-ip" placeholder="Ej: 192.168.1.50">
+    </div>
+
+    <div id="ips-info"></div>
+
+    <button onclick="guardar()">Continuar</button>
+
+    <script>
+        const radios = document.querySelectorAll('input[name="modo"]');
+        radios.forEach(r => r.addEventListener('change', actualizarVista));
+
+        async function actualizarVista() {
+            const modo = document.querySelector('input[name="modo"]:checked').value;
+            document.getElementById('campo-ip').style.display = modo === 'cliente' ? 'block' : 'none';
+
+            if (!window.configAPI) {
+                document.getElementById('ips-info').innerHTML = '⚠️ Error interno: no se pudo cargar la configuración (configAPI no disponible). Avisale a soporte.';
+                console.error('window.configAPI no está definido — revisar el preload en main.js');
+                return;
+            }
+
+            if (modo === 'servidor') {
+                try {
+                    const ips = await window.configAPI.obtenerIpsLocales();
+                    document.getElementById('ips-info').innerHTML = ips.length
+                        ? `📌 La IP de esta PC en la red es: <b>${ips.join(' / ')}</b><br>Anotala — la vas a necesitar para configurar las otras 2 PCs como "Cliente".`
+                        : '⚠️ No se detectó una IP de red local. Verificá que esta PC esté conectada a la red.';
+                } catch (err) {
+                    console.error('Error obteniendo IPs:', err);
+                    document.getElementById('ips-info').innerHTML = `⚠️ Error obteniendo la IP: ${err.message}`;
+                }
+            } else {
+                document.getElementById('ips-info').innerHTML = '';
+            }
+        }
+
+        async function guardar() {
+            const modo = document.querySelector('input[name="modo"]:checked').value;
+            const ipServidor = document.getElementById('input-ip').value.trim();
+
+            if (modo === 'cliente' && !ipServidor) {
+                alert('⚠️ Ingresá la IP de la PC Servidor.');
+                return;
+            }
+
+            if (!window.configAPI) {
+                alert('❌ Error interno: no se pudo conectar con la configuración (configAPI no disponible). Revisá la consola (Ctrl+Shift+I) y avisá a soporte con ese error.');
+                return;
+            }
+
+            try {
+                await window.configAPI.guardar({ modo, ipServidor });
+            } catch (err) {
+                console.error('Error guardando configuración:', err);
+                alert(`❌ Error al guardar: ${err.message}`);
+            }
+        }
+
+        actualizarVista();
+    </script>
+</body>
+</html>

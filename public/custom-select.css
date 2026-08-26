@@ -1,0 +1,133 @@
+/* ===== CustomSelect - estilos base ===== */
+/* Ajustá los valores (colores, tamaños) a la identidad visual de tu app */
+
+.csel {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 320px;
+  font-size: 14px;
+  font-family: inherit;
+  user-select: none;
+}
+
+.csel-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  color: #222;
+  transition: border-color 0.15s ease;
+}
+
+.csel-trigger:hover {
+  border-color: #999;
+}
+
+.csel-trigger:focus {
+  outline: none;
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.25);
+}
+
+.csel-trigger-texto {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.csel-trigger-texto.csel-placeholder {
+  color: #888;
+}
+
+.csel-flecha {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #666;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.csel-abierto .csel-flecha {
+  transform: rotate(180deg);
+}
+
+.csel-panel {
+  position: absolute;
+  z-index: 1000;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* IMPORTANTE: el atributo "hidden" por sí solo NO alcanza para ocultar el panel,
+   porque la regla de arriba (display: flex) es CSS de autor y le gana siempre
+   a la regla interna del navegador [hidden]{display:none}, sin importar
+   especificidad. Esta regla, al ser más específica (.csel-panel[hidden]),
+   fuerza el ocultamiento real cuando el JS pone panel.hidden = true. */
+.csel-panel[hidden] {
+  display: none;
+}
+
+.csel-buscador {
+  border: none;
+  border-bottom: 1px solid #eee;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+}
+
+.csel-lista {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+
+.csel-opcion {
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.csel-opcion:hover,
+.csel-opcion-hover {
+  background: #f0f4fa;
+}
+
+.csel-opcion-activa {
+  font-weight: 600;
+  background: #e8f0fe;
+}
+
+.csel-vacio {
+  padding: 10px 12px;
+  color: #999;
+  font-style: italic;
+}
+
+.csel-disabled .csel-trigger {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
